@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { posix } from "node:path";
+import { posix, sep } from "node:path";
 import ts from "typescript";
 
 export const REQUIRED_RUNTIME_FILES = [
@@ -84,6 +84,8 @@ export function verifyPackagedRuntime(archive) {
   );
   const asar = appBuilderRequire("@electron/asar");
   return validateRuntimeFiles(asar.listPackage(archive), (file) =>
-    asar.extractFile(archive, file).toString("utf8")
+    // @electron/asar 3.4.x on win32 resolves extractFile paths with the
+    // platform separator; the validated `file` keys are normalized to posix.
+    asar.extractFile(archive, file.split("/").join(sep)).toString("utf8")
   );
 }
