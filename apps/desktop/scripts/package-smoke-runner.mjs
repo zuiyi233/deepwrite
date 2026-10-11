@@ -3,22 +3,26 @@ import { spawn } from "node:child_process";
 import { assertElectronLaunchAllowed } from "../../../tools/electron-launch-environment.mjs";
 
 export function validateSmokeSummary(summary, reopened) {
-  if (
+  const invalid =
     summary.health?.status !== "ok" ||
     summary.health?.workers?.length !== 3 ||
-    summary.bookTemplates?.status !== "ok" ||
-    summary.bookTemplates?.created !== 4 ||
-    summary.agent?.status !== "ok" ||
-    summary.agent?.runtime?.mode !== "local-faux" ||
-    summary.agent?.completed !== true ||
     summary.conversation?.status !== "ok" ||
     summary.conversation?.staged !== true ||
     summary.conversation?.reopened !== reopened ||
     !(summary.conversation?.chunkPages >= 2) ||
     !(summary.conversation?.metadataChunkPages >= 2) ||
     summary.conversation?.unknownRetained !== true ||
-    summary.conversation?.proposalRetained !== true
-  )
+    summary.conversation?.proposalRetained !== true ||
+    // Sub-suite runs (e.g. DEEPWRITE_SMOKE_SUITE=conversation) omit these
+    // sections; the full all-suite summary must still carry and pass them.
+    (summary.bookTemplates !== undefined &&
+      (summary.bookTemplates?.status !== "ok" ||
+        summary.bookTemplates?.created !== 4)) ||
+    (summary.agent !== undefined &&
+      (summary.agent?.status !== "ok" ||
+        summary.agent?.runtime?.mode !== "local-faux" ||
+        summary.agent?.completed !== true));
+  if (invalid)
     throw new Error(
       `Packaged app returned an invalid smoke summary: ${JSON.stringify(summary)}`
     );
