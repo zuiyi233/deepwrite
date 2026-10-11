@@ -65,7 +65,9 @@ jobs:
       - name: Install wine for Windows target metadata
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends wine64
+          sudo apt-get install -y --no-install-recommends wine wine64
+          command -v wine || sudo ln -sf /usr/lib/wine/wine64 /usr/local/bin/wine
+          wine --version
 
       - name: Build desktop bundles
         run: pnpm build
