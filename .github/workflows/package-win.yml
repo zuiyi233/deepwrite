@@ -1,0 +1,51 @@
+name: Package Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-win-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-win:
+    name: Build and smoke Windows x64 test package
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and verify test package
+        run: pnpm pack:test:win
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepwrite-windows-x64-${{ github.sha }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/latest.yml
+          if-no-files-found: error
+          retention-days: 14

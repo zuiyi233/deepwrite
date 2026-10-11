@@ -16,7 +16,9 @@ function run(command, args, cwd = workspaceRoot) {
     const child = spawn(command, args, {
       cwd,
       env: process.env,
-      stdio: "inherit"
+      stdio: "inherit",
+      // Node >= 18.20 refuses to spawn .cmd/.bat without a shell (EINVAL).
+      shell: process.platform === "win32" && command.endsWith(".cmd")
     });
     child.once("error", rejectPromise);
     child.once("close", (code, signal) => {
