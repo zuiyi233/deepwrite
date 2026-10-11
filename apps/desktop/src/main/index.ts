@@ -10,6 +10,7 @@ import {
   refreshDesktopServices
 } from "./desktop-services";
 import { createDesktopStartup } from "./desktop-startup";
+import { startControlPlane } from "./control-plane/server";
 import {
   acquireStorageInstanceLock,
   initializeStorageLocation
@@ -52,7 +53,7 @@ import {
   nativeTheme
 } from "electron";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   BookSchema,
   SaveDocumentResultSchema,
@@ -2459,6 +2460,32 @@ if (!hasSingleInstanceLock) {
       registerIpc();
       supervisor.startAll();
       utilitiesStarted = true;
+    });
+    startControlPlane({
+      supervisor,
+      stores: {
+        modelConfigStore,
+        modelUsageStore,
+        workspaceAgentConfigStore,
+        agentTeamConfigStore,
+        libraryAgentConfigStore,
+        longAgentConfigStore,
+        generalSettingsStore,
+        workspaceDirectoryStore
+      },
+      getMainWindow: () => mainWindow,
+      syncGeneralSettings,
+      requireSelectedWorkspaceDirectory,
+      getDocumentsPath: () => app.getPath("documents"),
+      getAppVersion: () => app.getVersion(),
+      userDataPath,
+      diagnosticsDir: dirname(desktopStartup.log.path),
+      startupLogPath: desktopStartup.log.path,
+      log: (event, details) => desktopStartup.log.write(event, details)
+    }).catch((error: unknown) => {
+      desktopStartup.log.write("control-plane.start_failed", {
+        reason: error instanceof Error ? error.message : "UNKNOWN"
+      });
     });
     await desktopStartup.step("window", () => {
       mainWindow = createMainWindow();
