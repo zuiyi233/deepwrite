@@ -40,10 +40,10 @@ jobs:
         run: pnpm verify
 
   package-win:
-    name: Cross-build Windows x64 NSIS installer
+    name: Build and smoke Windows x64 installer
     needs: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
+    runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -62,18 +62,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install wine for Windows target metadata
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends wine wine64
-          command -v wine || sudo ln -sf /usr/lib/wine/wine64 /usr/local/bin/wine
-          wine --version
-
       - name: Build desktop bundles
         run: pnpm build
 
       - name: Package Windows x64 installer
         run: pnpm --dir apps/desktop exec electron-builder --win nsis --x64
+
+      - name: Smoke the built installer
+        run: pnpm --dir apps/desktop exec node scripts/verify-test-package.mjs win x64
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
