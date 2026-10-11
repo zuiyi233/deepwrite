@@ -36,7 +36,10 @@ export const CONTROL_PLANE_WRITE_COMMANDS = [
   "agentTeams.delete",
   "catalog.createLibrary",
   "catalog.createLibraryGroup",
-  "long.createBook"
+  "long.createBook",
+  "session.prompt",
+  "session.abort",
+  "session.user_input_response"
 ] as const satisfies readonly CommandEnvelope["type"][];
 
 /**
@@ -44,6 +47,8 @@ export const CONTROL_PLANE_WRITE_COMMANDS = [
  * route the agent bridge uses for accepted runs. No renderer handler involved.
  */
 export const CONTROL_PLANE_CORE_READ_COMMANDS = [
+  "long.list",
+  "long.open",
   "long.getWorkspaceIndex",
   "long.readDocument",
   "long.search"
@@ -52,8 +57,10 @@ export const CONTROL_PLANE_CORE_READ_COMMANDS = [
 /**
  * Headless library-package import via explicit paths (no native dialogs):
  * preview scans a folder/zip on disk, import materializes the libraries.
+ * `long.updateBindings` rewrites a book's linked skill/material libraries.
  */
 export const CONTROL_PLANE_CORE_WRITE_COMMANDS = [
+  "long.updateBindings",
   "catalog.previewLibraryPackageAtPath",
   "catalog.importLibraryPackageAtPath"
 ] as const satisfies readonly CommandEnvelope["type"][];

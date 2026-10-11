@@ -1,12 +1,14 @@
 import type {
   CommandEnvelope,
   CommandResult,
-  GeneralSettings
+  GeneralSettings,
+  SystemEventEnvelope
 } from "@deepwrite/contracts";
 import type { BrowserWindow, Dialog } from "electron";
 import { handleAgentTeamCommands } from "../ipc/agent-team-commands";
-import type { IpcCommandContext } from "../ipc/command-types";
+import type { ActiveRun, IpcCommandContext } from "../ipc/command-types";
 import { handleCatalogProjectCommands } from "../ipc/catalog-project-commands";
+import { handleSessionCommands } from "../ipc/session-commands";
 import { handleLongCommands } from "../ipc/long-commands";
 import {
   handleModelCommands,
@@ -28,6 +30,7 @@ import {
   workspaceResourceParent
 } from "../ipc/workspace-paths";
 import { authorizeMainInternalCommand } from "../internal-command-authorizer";
+import type { UsageRunContext } from "../usage-observation";
 import { controlPlaneRouteKind } from "./allowlist";
 
 const CORE_COMMAND_TIMEOUT_MS = 120_000;
@@ -46,6 +49,11 @@ export interface ControlPlaneStores {
 export interface ControlPlaneParams {
   supervisor: UtilitySupervisor;
   stores: ControlPlaneStores;
+  /** Shared with index.ts so agent-run event mirrors stay authoritative. */
+  activeRuns: Map<string, ActiveRun>;
+  terminalRuns: Set<string>;
+  pendingUsageContexts: Map<string, UsageRunContext>;
+  broadcastEvent: (event: SystemEventEnvelope) => void;
   getMainWindow: () => BrowserWindow | undefined;
   syncGeneralSettings: (settings: GeneralSettings) => void;
   requireSelectedWorkspaceDirectory: () => Promise<string | null>;
@@ -87,16 +95,14 @@ function buildIpcContext(params: ControlPlaneParams): IpcCommandContext {
   return {
     getMainWindow: requireMainWindow,
     supervisor: params.supervisor,
-    broadcastEvent: () => {
-      // 控制面不广播：Renderer 在下次拉取时读取最新状态。
-    },
+    broadcastEvent: params.broadcastEvent,
     dialog,
     continuationImportPreviews: unusable("continuationImportPreviews"),
     legacySyncPreviews: unusable("legacySyncPreviews"),
     authorizeMainInternalCommand,
-    activeRuns: new Map(),
-    pendingUsageContexts: new Map(),
-    terminalRuns: new Set(),
+    activeRuns: params.activeRuns,
+    pendingUsageContexts: params.pendingUsageContexts,
+    terminalRuns: params.terminalRuns,
     recordUsageObservation: () => undefined,
     requireModelConfigStore: () => params.stores.modelConfigStore,
     requireModelUsageStore: () => params.stores.modelUsageStore,
@@ -205,6 +211,15 @@ export async function dispatchControlPlaneCommand(
   if (command.type.startsWith("catalog.")) {
     return (
       (await handleCatalogProjectCommands(ipcContext, command)) ?? {
+        status: "rejected",
+        requestId: command.id,
+        error: { code: "control_plane.unhandled", message: "命令未被处理。" }
+      }
+    );
+  }
+  if (command.type.startsWith("session.")) {
+    return (
+      (await handleSessionCommands(ipcContext, command)) ?? {
         status: "rejected",
         requestId: command.id,
         error: { code: "control_plane.unhandled", message: "命令未被处理。" }

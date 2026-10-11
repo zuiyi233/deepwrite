@@ -14,12 +14,18 @@ describe("controlPlaneRouteKind", () => {
     expect(controlPlaneRouteKind("longAgents.save")).toBe("write");
     expect(controlPlaneRouteKind("long.createBook")).toBe("write");
     expect(controlPlaneRouteKind("catalog.createLibrary")).toBe("write");
+    expect(controlPlaneRouteKind("session.prompt")).toBe("write");
+    expect(controlPlaneRouteKind("session.abort")).toBe("write");
+    expect(controlPlaneRouteKind("session.user_input_response")).toBe("write");
   });
 
   it("classifies core passthrough commands", () => {
+    expect(controlPlaneRouteKind("long.list")).toBe("core-read");
+    expect(controlPlaneRouteKind("long.open")).toBe("core-read");
     expect(controlPlaneRouteKind("long.getWorkspaceIndex")).toBe("core-read");
     expect(controlPlaneRouteKind("long.readDocument")).toBe("core-read");
     expect(controlPlaneRouteKind("long.search")).toBe("core-read");
+    expect(controlPlaneRouteKind("long.updateBindings")).toBe("core-write");
     expect(controlPlaneRouteKind("catalog.previewLibraryPackageAtPath")).toBe(
       "core-write"
     );

@@ -1,5 +1,8 @@
 import { createServer, type IncomingMessage } from "node:http";
-import type { CommandEnvelope } from "@deepwrite/contracts";
+import type {
+  CommandEnvelope,
+  SystemEventEnvelope
+} from "@deepwrite/contracts";
 import { CommandEnvelopeSchema } from "@deepwrite/contracts";
 import { isAuthorized } from "./auth";
 import {
@@ -24,6 +27,19 @@ export interface ControlPlaneHandle {
 }
 
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
+const CONTROL_PLANE_EVENT_BUFFER = 500;
+
+// 事件环形缓冲：由 index.ts 的 broadcastEvent 调用 recordControlPlaneEvent
+// 填充（agent 事件在 index.ts 模块内部直调广播函数，包装引用截不到），
+// 供 GET /events 观察运行过程（含 ask_user_question 触发的待回答事件）。
+const recordedEvents: SystemEventEnvelope[] = [];
+
+export function recordControlPlaneEvent(event: SystemEventEnvelope): void {
+  recordedEvents.push(event);
+  if (recordedEvents.length > CONTROL_PLANE_EVENT_BUFFER) {
+    recordedEvents.shift();
+  }
+}
 
 /**
  * Starts the loopback-only control plane when enabled via
@@ -129,6 +145,38 @@ async function handleRequest(
         Number.isFinite(lines) ? lines : 200
       )
     });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/runs") {
+    const active = [...options.activeRuns.entries()].map(([runId, run]) => ({
+      runId,
+      sessionId: run.sessionId,
+      correlationId: run.correlationId,
+      resourceId: run.resourceId ?? null,
+      accepted: run.accepted
+    }));
+    respondJson(response, 200, {
+      active,
+      terminalRunIds: [...options.terminalRuns]
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/events") {
+    const lines = Number(url.searchParams.get("lines") ?? "100");
+    const sessionId = url.searchParams.get("sessionId");
+    const types = url.searchParams.get("types");
+    const typeSet = types ? new Set(types.split(",")) : undefined;
+    const capped = Number.isFinite(lines)
+      ? Math.max(1, Math.min(500, Math.floor(lines)))
+      : 100;
+    const matched = recordedEvents.filter((event) => {
+      if (typeSet && !typeSet.has(event.type)) return false;
+      if (sessionId && event.context?.sessionId !== sessionId) return false;
+      return true;
+    });
+    respondJson(response, 200, { events: matched.slice(-capped) });
     return;
   }
 

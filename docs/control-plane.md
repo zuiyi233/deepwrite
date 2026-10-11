@@ -38,7 +38,7 @@ Main 进程内置一个仅监听 `127.0.0.1` 的 HTTP 控制面，让外部 AI/�
 }
 ```
 
-## 命令白名单（阶段 1）
+## 命令白名单（阶段 2）
 
 - **读**：`models.list`、`models.listRemote`、`models.test`、`modelUsage.query`、
   `workspaceDirectory.list`、`generalSettings.list`、`workspaceAgents.list`、
@@ -47,12 +47,21 @@ Main 进程内置一个仅监听 `127.0.0.1` 的 HTTP 控制面，让外部 AI/�
   `longAgents.save/reset`（长篇智能体提示词注入走这里）、`libraryAgents.save/reset`、
   `agentTeams.save/setEnabled/create/rename/delete`、`catalog.createLibrary`、
   `catalog.createLibraryGroup`、`long.createBook`
-- **core 只读透传**：`long.getWorkspaceIndex`、`long.readDocument`、`long.search`
-- **core 写透传（无头导库）**：`catalog.previewLibraryPackageAtPath`、
-  `catalog.importLibraryPackageAtPath`
+- **智能体运行（阶段 2）**：`session.prompt`（触发长篇/短篇/剧本运行，payload 自包含：
+  sessionId + message + workspaceContext.longWorkspace{bookId,title,activeRoot,
+  activeAgentId,navigation}，envelope 的 context.sessionId 必须与 payload 一致）、
+  `session.abort`、`session.user_input_response`
+- **core 只读透传**：`long.list`、`long.open`、`long.getWorkspaceIndex`、
+  `long.readDocument`、`long.search`
+- **core 写透传（无头操作）**：`long.updateBindings`（改作品技能/素材库绑定）、
+  `catalog.previewLibraryPackageAtPath`、`catalog.importLibraryPackageAtPath`
 
-白名单之外（包括 `agent.prompt` 等会话运行命令）一律返回
-`control_plane.command_not_allowed`。阶段 2 计划覆盖智能体运行触发。
+运行状态查询：`GET /runs` 返回 active 运行（runId/sessionId/correlationId/resourceId）
+与 terminalRunIds——运行接受后轮询它直到 runId 进入 terminalRunIds。
+
+智能体的运行事件仍走 Main 的 `broadcastEvent` 广播到打开的界面（控制面与 index.ts
+共享 activeRuns/terminalRuns/pendingUsageContexts 镜像，事件归账与 GUI 触发的运行
+完全一致）。
 
 ## 配置文件地图（`GET /config-map` 返回）
 

@@ -10,7 +10,10 @@ import {
   refreshDesktopServices
 } from "./desktop-services";
 import { createDesktopStartup } from "./desktop-startup";
-import { startControlPlane } from "./control-plane/server";
+import {
+  recordControlPlaneEvent,
+  startControlPlane
+} from "./control-plane/server";
 import {
   acquireStorageInstanceLock,
   initializeStorageLocation
@@ -281,6 +284,7 @@ const mainWindowStartupGate = createMainWindowStartupGate(() =>
 );
 
 function broadcastEvent(event: SystemEventEnvelope): void {
+  recordControlPlaneEvent(event);
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       window.webContents.send(IPC_EVENT_CHANNEL, event);
@@ -2473,6 +2477,10 @@ if (!hasSingleInstanceLock) {
         generalSettingsStore,
         workspaceDirectoryStore
       },
+      activeRuns,
+      terminalRuns,
+      pendingUsageContexts,
+      broadcastEvent,
       getMainWindow: () => mainWindow,
       syncGeneralSettings,
       requireSelectedWorkspaceDirectory,

@@ -145,7 +145,7 @@ export function buildConfigMap(
     longAgents: join(configDir, "long-workspace-agents.json"),
     workspaceAgents: join(configDir, "workspace-agents.json"),
     extrasAgents: join(configDir, "extras-agents"),
-    catalogRegistry: join(workspace, "catalog-registry.json"),
+    catalogRegistry: join(userDataPath, "catalog-registry.json"),
     startupLog: startupLogPath,
     skillLibraries: join(workspace, "skills"),
     materialLibraries: join(workspace, "materials")
