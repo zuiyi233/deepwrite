@@ -62,6 +62,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install wine for Windows target metadata
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wine64
+
       - name: Build desktop bundles
         run: pnpm build
 
