@@ -14,11 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  package-win:
-    name: Build and smoke Windows x64 test package
-    runs-on: windows-latest
-    timeout-minutes: 90
-
+  verify:
+    name: Full verify on Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,8 +36,37 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and verify test package
-        run: pnpm pack:test:win
+      - name: Verify repository
+        run: pnpm verify
+
+  package-win:
+    name: Cross-build Windows x64 NSIS installer
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop bundles
+        run: pnpm build
+
+      - name: Package Windows x64 installer
+        run: pnpm --dir apps/desktop exec electron-builder --win nsis --x64
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
