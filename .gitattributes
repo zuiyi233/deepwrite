@@ -1,0 +1,22 @@
+# Normalise line endings: the repository stores and checks out LF so that
+# prettier's endOfLine: "lf" passes on fresh clones regardless of the local
+# git autocrlf setting (Windows runners/clone default to CRLF otherwise).
+* text=auto eol=lf
+
+# Windows-specific scripts keep CRLF so cmd.exe and PowerShell parse them.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.node binary
