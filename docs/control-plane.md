@@ -59,6 +59,17 @@ Main 进程内置一个仅监听 `127.0.0.1` 的 HTTP 控制面，让外部 AI/�
 运行状态查询：`GET /runs` 返回 active 运行（runId/sessionId/correlationId/resourceId）
 与 terminalRunIds——运行接受后轮询它直到 runId 进入 terminalRunIds。
 
+`GET /events?since=<seq>` 返回控制面启动后累积的内部事件（`SystemEventEnvelope`，
+环形缓冲带序号），供无头触发后观察智能体进度用；`/runs` 里出现 runId 且
+`/events` 看到 `agent.user_input_requested` 时，用 `session.user_input_response`
+应答（payload 携带 requestId 与逐条 answer）。
+
+无头运行（`session.prompt`）的 workspaceContext 可携带 `attachedSkills`（标题形如
+`库名 · 条目名`，供 load_skill 命中）、`writeApprovalMode: "auto-approve"` 与
+`autoApproveCrossStageOperations: true`——批量稿件改写自动放行。已知边界：
+**headless 无法为新章节实例化正文**（Renderer proposal 应用闭环不在无头路径内），
+涉及新章节需保持 GUI 会话或接受该限制。
+
 智能体的运行事件仍走 Main 的 `broadcastEvent` 广播到打开的界面（控制面与 index.ts
 共享 activeRuns/terminalRuns/pendingUsageContexts 镜像，事件归账与 GUI 触发的运行
 完全一致）。
@@ -90,6 +101,11 @@ python tools/dwctl.py long-agent-save --json long-agent.json   # 注入总纲
 python tools/dwctl.py import-library L:\staging\技能库导入 --domain skill
 python tools/dwctl.py create-long-book --title 冒烟测试 --genre 都市
 python tools/dwctl.py call --type models.list
+python tools/dwctl.py bind-library --book 冒烟测试 --library 题材指南 --kind skill   # 绑定技能库
+python tools/dwctl.py run-long --book 冒烟测试 --root draft \
+  --message "加载技能并续写第 1 章（涉史内容）"                       # 无头运行，自动注入 attachedSkills
+python tools/dwctl.py runs       # 轮询运行状态（runId → terminalRunIds）
+python tools/dwctl.py events     # 订阅事件流，观察 user_input_requested
 ```
 
 令牌自动从 `%APPDATA%\@deepwrite\desktop\config\control-plane.json` 读取；
