@@ -28,14 +28,20 @@ describe("packaged persistence smoke acceptance", () => {
   });
   it("requires template creation to cross the real application IPC routes", () => {
     const { bookTemplates: _templates, ...missing } = summary();
-    expect(() => validateSmokeSummary(missing, false)).toThrow(
+    expect(() => validateSmokeSummary(missing, false, "all")).toThrow(
       "invalid smoke summary"
     );
     const incomplete = summary();
     incomplete.bookTemplates.created = 2;
-    expect(() => validateSmokeSummary(incomplete, false)).toThrow(
+    expect(() => validateSmokeSummary(incomplete, false, "all")).toThrow(
       "invalid smoke summary"
     );
+  });
+  it("relaxes the template and agent sections for sub-suite runs", () => {
+    const { bookTemplates: _templates, agent: _agent, ...subSuite } = summary();
+    expect(() =>
+      validateSmokeSummary(subSuite, false, "conversation")
+    ).not.toThrow();
   });
   it("requires the second application launch to read the previously committed profile", () => {
     const result = summary();

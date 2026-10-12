@@ -2,7 +2,8 @@ import { prepareSmokeWorkspace } from "./smoke-workspace.mjs";
 import { spawn } from "node:child_process";
 import { assertElectronLaunchAllowed } from "../../../tools/electron-launch-environment.mjs";
 
-export function validateSmokeSummary(summary, reopened) {
+export function validateSmokeSummary(summary, reopened, suite) {
+  const fullSuite = suite === undefined || suite === "all";
   const invalid =
     summary.health?.status !== "ok" ||
     summary.health?.workers?.length !== 3 ||
@@ -15,10 +16,10 @@ export function validateSmokeSummary(summary, reopened) {
     summary.conversation?.proposalRetained !== true ||
     // Sub-suite runs (e.g. DEEPWRITE_SMOKE_SUITE=conversation) omit these
     // sections; the full all-suite summary must still carry and pass them.
-    (summary.bookTemplates !== undefined &&
+    (fullSuite &&
       (summary.bookTemplates?.status !== "ok" ||
         summary.bookTemplates?.created !== 4)) ||
-    (summary.agent !== undefined &&
+    (fullSuite &&
       (summary.agent?.status !== "ok" ||
         summary.agent?.runtime?.mode !== "local-faux" ||
         summary.agent?.completed !== true));

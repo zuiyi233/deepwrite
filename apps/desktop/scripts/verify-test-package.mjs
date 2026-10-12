@@ -219,7 +219,7 @@ try {
       smokeUserData,
       targetPlatform
     );
-    validateSmokeSummary(summary, reopened);
+    validateSmokeSummary(summary, reopened, process.env.DEEPWRITE_SMOKE_SUITE);
     console.log(
       `PACKAGE_CONVERSATION_SMOKE_OK reopened=${reopened} chunkPages=${summary.conversation.chunkPages} metadataChunkPages=${summary.conversation.metadataChunkPages}`
     );
